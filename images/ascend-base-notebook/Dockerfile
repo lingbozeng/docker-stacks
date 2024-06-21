@@ -74,7 +74,8 @@ RUN sed -i 's/^#force_color_prompt=yes/force_color_prompt=yes/' /etc/skel/.bashr
 RUN echo "auth requisite pam_deny.so" >> /etc/pam.d/su && \
     sed -i.bak -e 's/^%admin/#%admin/' /etc/sudoers && \
     sed -i.bak -e 's/^%sudo/#%sudo/' /etc/sudoers && \
-    useradd --no-log-init --create-home --shell /bin/bash --uid "${NB_UID}" --no-user-group "${NB_USER}" && \
+    groupadd ${NB_USER} -g ${NB_GID} && \
+    useradd --no-log-init --create-home --shell /bin/bash --uid "${NB_UID}" --gid "${NB_GID}" "${NB_USER}" && \
     mkdir -p "${CONDA_DIR}" && \
     chown "${NB_USER}:${NB_GID}" "${CONDA_DIR}" && \
     chmod g+w /etc/passwd && \
@@ -119,6 +120,8 @@ RUN set -x && \
         --prefix="${CONDA_DIR}" \
         --yes \
         "${PYTHON_SPECIFIER}" \
+        # avoid error ----- AttributeError: module 'typing' has no attribute 'TypedDict'
+        'urllib3=2.2.1' \
         'mamba' \
         'jupyter_core' && \
     rm -rf /tmp/bin/ && \
@@ -134,8 +137,11 @@ RUN set -x && \
     mamba clean --all -f -y && \
     npm cache clean --force && \
     jupyter lab clean && \
-    rm -rf "/home/${NB_USER}/.cache/yarn" && \
-    fix-permissions "${CONDA_DIR}" && \
+    rm -rf "/home/${NB_USER}/.cache/yarn"
+
+USER root
+
+RUN fix-permissions "${CONDA_DIR}" && \
     fix-permissions "/home/${NB_USER}"
 
 # Copy local files as late as possible to avoid cache busting
@@ -153,8 +159,6 @@ CMD ["start-notebook.py"]
 # Copy local files as late as possible to avoid cache busting
 COPY start-notebook.py start-notebook.sh start-singleuser.py start-singleuser.sh /usr/local/bin/
 COPY jupyter_server_config.py docker_healthcheck.py /etc/jupyter/
-
-USER root
 
 RUN fix-permissions /etc/jupyter/
 

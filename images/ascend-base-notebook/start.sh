@@ -66,14 +66,14 @@ if [ "$(id -u)" == 0 ]; then
     # - CHOWN_HOME_OPTS / CHOWN_EXTRA_OPTS: arguments to the chown commands
 
     # Refit the jovyan user to the desired user (NB_USER)
-    if id jovyan &> /dev/null; then
-        if ! usermod --home "/home/${NB_USER}" --login "${NB_USER}" jovyan 2>&1 | grep "no changes" > /dev/null; then
-            _log "Updated the jovyan user:"
-            _log "- username: jovyan       -> ${NB_USER}"
-            _log "- home dir: /home/jovyan -> /home/${NB_USER}"
+    if id HwHiAiUser &> /dev/null; then
+        if ! usermod --home "/home/${NB_USER}" --login "${NB_USER}" HwHiAiUser 2>&1 | grep "no changes" > /dev/null; then
+            _log "Updated the HwHiAiUser user:"
+            _log "- username: HwHiAiUser       -> ${NB_USER}"
+            _log "- home dir: /home/HwHiAiUser -> /home/${NB_USER}"
         fi
     elif ! id -u "${NB_USER}" &> /dev/null; then
-        _log "ERROR: Neither the jovyan user nor '${NB_USER}' exists. This could be the result of stopping and starting, the container with a different NB_USER environment variable."
+        _log "ERROR: Neither the HwHiAiUser user nor '${NB_USER}' exists. This could be the result of stopping and starting, the container with a different NB_USER environment variable."
         exit 1
     fi
     # Ensure the desired user (NB_USER) gets its desired user id (NB_UID) and is
@@ -86,7 +86,7 @@ if [ "$(id -u)" == 0 ]; then
         fi
         # Recreate the desired user as we want it
         userdel "${NB_USER}"
-        useradd --no-log-init --home "/home/${NB_USER}" --shell /bin/bash --uid "${NB_UID}" --gid "${NB_GID}" --groups 100 "${NB_USER}"
+        useradd --no-log-init --home "/home/${NB_USER}" --shell /bin/bash --uid "${NB_UID}" --gid "${NB_GID}" --groups 1000 "${NB_USER}"
     fi
     # Update the home directory if the desired user (NB_USER) is root and the
     # desired user id (NB_UID) is 0 and the desired group id (NB_GID) is 0.
@@ -99,26 +99,26 @@ if [ "$(id -u)" == 0 ]; then
     # Move or symlink the jovyan home directory to the desired user's home
     # directory if it doesn't already exist, and update the current working
     # directory to the new location if needed.
-    if [[ "${NB_USER}" != "jovyan" ]]; then
+    if [[ "${NB_USER}" != "HwHiAiUser" ]]; then
         if [[ ! -e "/home/${NB_USER}" ]]; then
-            _log "Attempting to copy /home/jovyan to /home/${NB_USER}..."
+            _log "Attempting to copy /home/HwHiAiUser to /home/${NB_USER}..."
             mkdir "/home/${NB_USER}"
             # shellcheck disable=SC2086
-            if cp ${CP_OPTS:--a} /home/jovyan/. "/home/${NB_USER}/"; then
+            if cp ${CP_OPTS:--a} /home/HwHiAiUser/. "/home/${NB_USER}/"; then
                 _log "Success!"
             else
-                _log "Failed to copy data from /home/jovyan to /home/${NB_USER}!"
-                _log "Attempting to symlink /home/jovyan to /home/${NB_USER}..."
-                if ln -s /home/jovyan "/home/${NB_USER}"; then
+                _log "Failed to copy data from /home/HwHiAiUser to /home/${NB_USER}!"
+                _log "Attempting to symlink /home/HwHiAiUser to /home/${NB_USER}..."
+                if ln -s /home/HwHiAiUser "/home/${NB_USER}"; then
                     _log "Success creating symlink!"
                 else
-                    _log "ERROR: Failed copy data from /home/jovyan to /home/${NB_USER} or to create symlink!"
+                    _log "ERROR: Failed copy data from /home/HwHiAiUser to /home/${NB_USER} or to create symlink!"
                     exit 1
                 fi
             fi
         fi
         # Ensure the current working directory is updated to the new path
-        if [[ "${PWD}/" == "/home/jovyan/"* ]]; then
+        if [[ "${PWD}/" == "/home/HwHiAiUser/"* ]]; then
             new_wd="/home/${NB_USER}/${PWD:13}"
             _log "Changing working directory to ${new_wd}"
             cd "${new_wd}"
@@ -196,8 +196,8 @@ else
         _log "WARNING: container must be started as root to grant sudo permissions!"
     fi
 
-    JOVYAN_UID="$(id -u jovyan 2>/dev/null)"  # The default UID for the jovyan user
-    JOVYAN_GID="$(id -g jovyan 2>/dev/null)"  # The default GID for the jovyan user
+    JOVYAN_UID="$(id -u HwHiAiUser 2>/dev/null)"  # The default UID for the jovyan user
+    JOVYAN_GID="$(id -g HwHiAiUser 2>/dev/null)"  # The default GID for the jovyan user
 
     # Attempt to ensure the user uid we currently run as has a named entry in
     # the /etc/passwd file, as it avoids software crashing on hard assumptions
@@ -208,19 +208,19 @@ else
     if ! whoami &> /dev/null; then
         _log "There is no entry in /etc/passwd for our UID=$(id -u). Attempting to fix..."
         if [[ -w /etc/passwd ]]; then
-            _log "Renaming old jovyan user to nayvoj ($(id -u jovyan):$(id -g jovyan))"
+            _log "Renaming old HwHiAiUser user to nayvoj ($(id -u HwHiAiUser):$(id -g HwHiAiUser))"
 
             # We cannot use "sed --in-place" since sed tries to create a temp file in
             # /etc/ and we may not have write access. Apply sed on our own temp file:
-            sed --expression="s/^jovyan:/nayvoj:/" /etc/passwd > /tmp/passwd
-            echo "${NB_USER}:x:$(id -u):$(id -g):,,,:/home/jovyan:/bin/bash" >> /tmp/passwd
+            sed --expression="s/^HwHiAiUser:/nayvoj:/" /etc/passwd > /tmp/passwd
+            echo "${NB_USER}:x:$(id -u):$(id -g):,,,:/home/HwHiAiUser:/bin/bash" >> /tmp/passwd
             cat /tmp/passwd > /etc/passwd
             rm /tmp/passwd
 
             _log "Added new ${NB_USER} user ($(id -u):$(id -g)). Fixed UID!"
 
-            if [[ "${NB_USER}" != "jovyan" ]]; then
-                _log "WARNING: user is ${NB_USER} but home is /home/jovyan. You must run as root to rename the home directory!"
+            if [[ "${NB_USER}" != "HwHiAiUser" ]]; then
+                _log "WARNING: user is ${NB_USER} but home is /home/HwHiAiUser. You must run as root to rename the home directory!"
             fi
         else
             _log "WARNING: unable to fix missing /etc/passwd entry because we don't have write permission. Try setting gid=0 with \"--user=$(id -u):0\"."
@@ -231,7 +231,7 @@ else
     # A misconfiguration occurs when the user modifies the default values of
     # NB_USER, NB_UID, or NB_GID, but we cannot update those values because we
     # are not root.
-    if [[ "${NB_USER}" != "jovyan" && "${NB_USER}" != "$(id -un)" ]]; then
+    if [[ "${NB_USER}" != "HwHiAiUser" && "${NB_USER}" != "$(id -un)" ]]; then
         _log "WARNING: container must be started as root to change the desired user's name with NB_USER=\"${NB_USER}\"!"
     fi
     if [[ "${NB_UID}" != "${JOVYAN_UID}" && "${NB_UID}" != "$(id -u)" ]]; then
@@ -242,8 +242,8 @@ else
     fi
 
     # Warn if the user isn't able to write files to ${HOME}
-    if [[ ! -w /home/jovyan ]]; then
-        _log "WARNING: no write access to /home/jovyan. Try starting the container with group 'users' (100), e.g. using \"--group-add=users\"."
+    if [[ ! -w /home/HwHiAiUser ]]; then
+        _log "WARNING: no write access to /home/HwHiAiUser. Try starting the container with group 'users' (1000), e.g. using \"--group-add=users\"."
     fi
 
     # NOTE: This hook is run as the user we started the container as!
