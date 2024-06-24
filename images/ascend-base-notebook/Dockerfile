@@ -15,7 +15,7 @@ USER root
 # Install all OS dependencies for the Server that starts
 # but lacks all features (e.g., download as all possible file formats)
 ENV DEBIAN_FRONTEND noninteractive
-RUN echo "deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports focal main universe" >> /etc/apt/sources.list
+# RUN echo "deb http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports focal main universe" >> /etc/apt/sources.list
 RUN apt-get update --yes && \
     # - `apt-get upgrade` is run to patch known vulnerabilities in system packages
     #   as the Ubuntu base image is rebuilt too seldom sometimes (less than once a month)
@@ -39,12 +39,25 @@ RUN apt-get update --yes && \
     # - `tini` is installed as a helpful container entrypoint,
     #   that reaps zombie processes and such of the actual executable we want to start
     #   See https://github.com/krallin/tini#why-tini for details
-    tini \
+    # tini \
     wget && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     echo "C.UTF-8 UTF-8" >> /etc/locale.gen && \
     locale-gen
+
+# Add Tini
+ENV TINI_VERSION v0.18.0
+# ADD https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-arm64 /usr/bin/tini
+# RUN chmod +x /usr/bin/tini
+RUN if [ $(arch) = "aarch64" ];then \
+    wget https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini-arm64; \
+    mv tini-arm64 /usr/bin/tini; \
+    else \
+    wget https://github.com/krallin/tini/releases/download/${TINI_VERSION}/tini; \
+    mv tini /usr/bin/tini; \
+    fi && \
+    chmod +x /usr/bin/tini
 
 # Configure environment
 ENV CONDA_DIR=/opt/conda \
