@@ -301,10 +301,10 @@ This recipe is not tested and might be broken.
 FROM quay.io/jupyter/all-spark-notebook
 
 # Set env vars for pydoop
-ENV HADOOP_HOME /usr/local/hadoop-2.7.3
-ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
-ENV HADOOP_CONF_HOME /usr/local/hadoop-2.7.3/etc/hadoop
-ENV HADOOP_CONF_DIR /usr/local/hadoop-2.7.3/etc/hadoop
+ENV HADOOP_HOME=/usr/local/hadoop-2.7.3
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV HADOOP_CONF_HOME=/usr/local/hadoop-2.7.3/etc/hadoop
+ENV HADOOP_CONF_DIR=/usr/local/hadoop-2.7.3/etc/hadoop
 
 USER root
 # Add proper open-jdk-8 not the jre only, needed for pydoop
@@ -525,3 +525,57 @@ they may be explained in the "Installation instructions" section of the Download
 ```{literalinclude} recipe_code/oracledb.dockerfile
 :language: docker
 ```
+
+## Building stack images with custom arguments
+
+A selection of prebuilt images are available from Quay.io,
+however, it's impossible to cater to everybody's needs.
+For extensive customization with an automated build pipeline,
+you may wish to create a [community-maintained stack](https://jupyter-docker-stacks.readthedocs.io/en/latest/contributing/stacks.html),
+however, for minor customizations, this may be overkill.
+For example, you may wish to use the same jupyter stacks but built on a different base image,
+or build with a different Python version.
+
+To achieve this you can use [Docker Bake](https://docs.docker.com/build/bake/)
+to build the stacks locally with custom arguments.
+
+```{note}
+Custom arguments may result in build errors due to incompatibility.
+If so your use-case may require a fully customized stack.
+```
+
+As a basic example, if you want to build a custom image based on the `minimal-notebook` image using `Python 3.12`,
+then with a Dockerfile like:
+
+```{code-block} Dockerfile
+:caption: Dockerfile
+
+ARG BASE_CONTAINER=minimal-notebook
+FROM $BASE_CONTAINER
+...
+```
+
+Include the below file in your project:
+
+```{literalinclude} recipe_code/docker-bake.python312.hcl
+:force:
+:language: hcl
+:caption: docker-bake.hcl
+```
+
+To build this stack, in the same directory run:
+
+```bash
+docker buildx bake
+```
+
+Docker Bake then determines the correct build order from the `contexts` parameters
+and builds the stack as requested.
+
+This image can then be run using:
+
+```bash
+docker run custom-jupyter
+```
+
+or referenced in a docker compose file.
