@@ -136,6 +136,7 @@ RUN set -x && \
         # avoid error ----- AttributeError: module 'typing' has no attribute 'TypedDict'
         'urllib3=2.2.1' \
         'mamba' \
+        'conda' \
         'jupyter_core' && \
     rm -rf /tmp/bin/ && \
     # Pin major.minor version of python
